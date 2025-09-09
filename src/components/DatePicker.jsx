@@ -17,6 +17,7 @@ const DatePicker = ({ selectedDate, onDateChange, maxDaysFromToday = null, isAdm
   };
 
   const canGoToPrevious = () => {
+    if (isAdmin) return true; // Admin can go to any past date
     const previousDay = subDays(selectedDate, 1);
     return isAfter(previousDay, startOfDay(new Date())) || 
            format(previousDay, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');

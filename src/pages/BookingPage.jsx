@@ -368,7 +368,26 @@ END:VCALENDAR`;
                     })
                     .slice(0, 5)
                     .map((reservation) => {
-                    const isPastReservation = new Date(reservation.date) < new Date();
+                    // Geçmiş randevu kontrolü: Tarih bugünden önce VEYA bugün ise saat geçmiş olmalı
+                    const reservationDate = new Date(reservation.date);
+                    const today = new Date();
+                    const isToday = reservationDate.toDateString() === today.toDateString();
+                    
+                    let isPastReservation = false;
+                    if (isToday) {
+                      // Bugün ise, randevu saatini kontrol et
+                      const reservationTime = reservation.time_slot.includes(':') && reservation.time_slot.split(':').length === 3 
+                        ? reservation.time_slot.substring(0, 5) // Remove seconds if present
+                        : reservation.time_slot;
+                      const [hours, minutes] = reservationTime.split(':').map(Number);
+                      const reservationDateTime = new Date(reservationDate);
+                      reservationDateTime.setHours(hours, minutes, 0, 0);
+                      
+                      isPastReservation = reservationDateTime < today;
+                    } else {
+                      // Bugün değilse, sadece tarih kontrolü yap
+                      isPastReservation = reservationDate < today;
+                    }
                     return (
                       <div 
                         key={reservation.id} 
@@ -463,6 +482,22 @@ END:VCALENDAR`;
           <p className="text-gray-600 text-lg">{t('selectDate')}</p>
         </div>
 
+        {/* Randevu Oluştur Butonu - Her zaman görünür */}
+        <div className="text-center mb-8">
+          <button
+            onClick={handleConfirmReservation}
+            disabled={!selectedSlot || loading}
+            className={`font-semibold py-3 px-8 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+              selectedSlot 
+                ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-900 focus:ring-yellow-500 shadow-lg hover:shadow-xl transform hover:scale-105' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+            style={selectedSlot ? { backgroundColor: '#edc700' } : {}}
+          >
+            {selectedSlot ? t('confirmReservation') : 'Önce bir saat seçin'}
+          </button>
+        </div>
+
         <DatePicker
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
@@ -484,19 +519,6 @@ END:VCALENDAR`;
             currentUserId={userData?.customerId}
             onUserCancel={handleUserCancel}
           />
-        )}
-
-        {selectedSlot && (
-          <div className="text-center mt-8">
-            <button
-              onClick={handleConfirmReservation}
-              disabled={loading}
-              className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3 px-8 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50"
-              style={{ backgroundColor: '#edc700' }}
-            >
-              {t('confirmReservation')}
-            </button>
-          </div>
         )}
 
         {/* Confirmation Modal */}
